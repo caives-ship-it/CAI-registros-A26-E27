@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAI · Centro de Aplicación de Idiomas — UVP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ============ HEADER / BOARDING STRIP ============ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <img src="assets/logo-cai-transparent.png" alt="Logotipo CAI" class="brand-mark-img">
+      <div class="brand-text">
+        <strong>Centro de Aplicación de Idiomas</strong>
+        <span>Universidad del Valle de Puebla</span>
+      </div>
+    </div>
+    <nav class="tabs" id="mainNav">
+      <button class="tab-btn active" data-tab="registro">Registro</button>
+      <button class="tab-btn hidden" data-tab="asistencia" data-guarded>Asistencia</button>
+      <button class="tab-btn hidden" data-tab="actividades" data-guarded>Actividades</button>
+      <button class="tab-btn hidden" data-tab="estadisticas" data-guarded>Estadísticas</button>
+      <button class="tab-btn hidden" data-tab="exportar" data-guarded>Exportar</button>
+      <button class="tab-btn hidden" data-tab="config" data-guarded>Configuración</button>
+    </nav>
+    <div class="topbar-status">
+      <span id="syncBadge" class="badge badge-off">● Local</span>
+      <button id="adminToggle" class="btn-ghost-sm">Acceso staff</button>
+    </div>
+  </div>
+</header>
+
+<main id="app">
+
+  <div id="syncWarning" class="sync-warning hidden">
+    ⚠ No estás sincronizado con Firebase: lo que registres o escanees aquí solo se guarda en <strong>este navegador</strong>. Si tus estudiantes usan otros dispositivos, no verán estos cambios hasta que conectes Firebase en <button class="link-btn" id="syncWarningLink">Configuración</button>.
+  </div>
+
+  <!-- ============ TAB: REGISTRO (público) ============ -->
+  <section class="tab-panel active" id="tab-registro">
+    <div class="hero-strip">
+      <div>
+        <p class="eyebrow">Boarding pass lingüístico</p>
+        <h1>Reserva tu lugar en la próxima actividad del CAI</h1>
+        <p class="hero-sub">Escribe tu matrícula y detectamos tu carrera automáticamente. Elige una sesión con cupo disponible y listo — tu asistencia se registra al escanear tu credencial el día del evento.</p>
+      </div>
+      <div class="hero-stamp" id="heroStamp">
+        <svg viewBox="0 0 120 120" width="100" height="100"><circle cx="60" cy="60" r="54" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="6 5"/><text x="60" y="55" text-anchor="middle" font-family="IBM Plex Mono" font-size="15" fill="currentColor" font-weight="600">CAI</text><text x="60" y="72" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="currentColor">UVP · ENGLISH</text></svg>
+      </div>
+    </div>
+
+    <div class="registro-layout">
+      <div class="card form-card">
+        <h2>Datos del estudiante</h2>
+        <form id="registroForm" autocomplete="off">
+          <label>Matrícula
+            <input type="text" id="f_matricula" placeholder="Ej. FT12345" required maxlength="20">
+          </label>
+          <div class="carrera-detect" id="carreraDetect">
+            <span class="carrera-detect-label">Carrera detectada</span>
+            <span class="carrera-detect-value" id="carreraDetectValue">— escribe tu matrícula —</span>
+          </div>
+          <label id="carreraManualWrap" class="hidden">Selecciona tu carrera (no se detectó automáticamente)
+            <select id="f_carrera_manual"></select>
+          </label>
+
+          <label>Nombre completo
+            <input type="text" id="f_nombre" placeholder="Nombre(s) y apellidos" required>
+          </label>
+
+          <div class="grid-2">
+            <label>Docente de inglés
+              <input type="text" id="f_docente" placeholder="Nombre del docente" required>
+            </label>
+            <label>Grupo de inglés
+              <input type="text" id="f_grupo" placeholder="Ej. B1-302" required>
+            </label>
+          </div>
+
+          <label>Actividad / sesión
+            <select id="f_sesion" required>
+              <option value="">— selecciona una sesión con cupo disponible —</option>
+            </select>
+          </label>
+
+          <div id="sesionPreview" class="sesion-preview hidden"></div>
+          <div id="formMsg" class="form-msg hidden"></div>
+
+          <button type="submit" class="btn-primary" id="submitRegistro">Confirmar mi registro</button>
+        </form>
+      </div>
+
+      <div class="card catalog-card">
+        <h2>Talleres y clubes disponibles</h2>
+        <p class="muted-sm">Consulta objetivo, nivel y sede antes de registrarte.</p>
+        <div id="catalogList" class="catalog-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: ASISTENCIA ============ -->
+  <section class="tab-panel" id="tab-asistencia">
+    <h1>Escaneo de asistencia</h1>
+    <p class="section-sub">Selecciona la sesión del día y escanea la credencial (QR) de cada estudiante. El lector funciona como teclado: solo mantén el cursor en el campo de abajo.</p>
+
+    <div class="card">
+      <label>Sesión activa
+        <select id="scan_sesion"></select>
+      </label>
+      <label>Escanear matrícula (o escribir y presionar Enter)
+        <input type="text" id="scan_input" placeholder="Esperando lectura de QR / código de barras..." autocomplete="off">
+      </label>
+      <div id="scanFeedback" class="scan-feedback"></div>
+    </div>
+
+    <div class="card">
+      <div class="table-toolbar">
+        <h2 id="scanListTitle">Registrados en esta sesión</h2>
+        <button class="btn-secondary" id="closeSessionBtn">Cerrar sesión y aplicar inasistencias</button>
+      </div>
+      <div class="table-wrap">
+        <table id="scanTable">
+          <thead><tr><th>Matrícula</th><th>Nombre</th><th>Carrera</th><th>Estado</th><th>Hora asistencia</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: ACTIVIDADES (catálogo + sesiones) ============ -->
+  <section class="tab-panel" id="tab-actividades">
+    <div class="table-toolbar">
+      <h1>Actividades y sesiones</h1>
+      <button class="btn-primary" id="newActividadBtn">+ Nueva actividad</button>
+    </div>
+    <p class="section-sub">Título, tipo, duración, ubicación, objetivo, público y nivel — toda esta información es editable. Programa una fecha (sesión) por cada ocasión que se imparta la actividad; los estudiantes solo ven las sesiones abiertas con cupo disponible.</p>
+    <div id="actividadesGrid" class="actividades-grid"></div>
+  </section>
+
+  <!-- ============ TAB: ESTADISTICAS ============ -->
+  <section class="tab-panel" id="tab-estadisticas">
+    <h1>Estadísticas</h1>
+    <div class="stats-kpis" id="statsKpis"></div>
+
+    <div class="card">
+      <h2>Asistencia por actividad</h2>
+      <div id="statsPorActividad"></div>
+    </div>
+
+    <div class="grid-2-cards">
+      <div class="card">
+        <h2>Asistencias por carrera (global)</h2>
+        <div id="statsPorCarrera"></div>
+      </div>
+      <div class="card">
+        <h2>Sanciones activas</h2>
+        <div id="statsSanciones"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Matriz: asistencias por carrera y actividad</h2>
+      <div class="table-wrap">
+        <table id="matrixTable"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: EXPORTAR ============ -->
+  <section class="tab-panel" id="tab-exportar">
+    <h1>Exportar información</h1>
+    <p class="section-sub">Descarga respaldo completo de registros, asistencias y estadísticas.</p>
+    <div class="export-actions">
+      <button class="btn-primary" id="exportExcelBtn">Descargar Excel (.xlsx)</button>
+      <button class="btn-secondary" id="exportCsvBtn">Descargar CSV</button>
+      <button class="btn-secondary" id="exportJsonBtn">Respaldo JSON</button>
+      <label class="btn-secondary file-import">Importar JSON
+        <input type="file" id="importJsonInput" accept="application/json" class="hidden">
+      </label>
+    </div>
+    <div class="card">
+      <h2>Resumen de lo que se exporta</h2>
+      <ul class="bullets">
+        <li><strong>Hoja Registros:</strong> matrícula, nombre, carrera, docente, grupo, actividad, fecha de sesión, estado de asistencia, hora de asistencia.</li>
+        <li><strong>Hoja Resumen por actividad:</strong> registrados, asistieron, no asistieron, % asistencia.</li>
+        <li><strong>Hoja Resumen por carrera:</strong> total de asistencias por carrera.</li>
+        <li><strong>Hoja Sanciones:</strong> estudiantes con restricción activa y fecha en que se levanta.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ TAB: CONFIG ============ -->
+  <section class="tab-panel" id="tab-config">
+    <h1>Configuración</h1>
+
+    <div class="card">
+      <h2>Contraseña de staff</h2>
+      <p class="muted-sm">Protege el acceso a las pestañas administrativas en este navegador. No es un sistema de autenticación robusto: para varios dispositivos usa además la sincronización con Firebase.</p>
+      <div class="grid-2">
+        <label>Nueva contraseña
+          <input type="password" id="cfg_newpass" placeholder="Dejar vacío para no cambiar">
+        </label>
+        <label>Confirmar
+          <input type="password" id="cfg_newpass2" placeholder="Confirmar contraseña">
+        </label>
+      </div>
+      <button class="btn-secondary" id="savePassBtn">Guardar contraseña</button>
+    </div>
+
+    <div class="card">
+      <h2>Nomenclatura de matrícula → carrera</h2>
+      <p class="muted-sm">Las dos primeras letras de la matrícula determinan la carrera detectada automáticamente. Edita o agrega prefijos según cambien las nomenclaturas.</p>
+      <div class="table-toolbar">
+        <span></span>
+        <button class="btn-secondary" id="newPrefijoBtn">+ Agregar prefijo</button>
+      </div>
+      <div class="table-wrap">
+        <table id="nomenclaturaTable">
+          <thead><tr><th>Prefijo</th><th>Carrera</th><th>División</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Sincronización en tiempo real (Firebase)</h2>
+      <p class="muted-sm">Sin Firebase, cada dispositivo guarda su propia información en este navegador (localStorage). Con Firebase, el registro de estudiantes y el escaneo de asistencia se sincronizan al instante entre todos los dispositivos del CAI.</p>
+      <div class="grid-2">
+        <label>API Key<input type="text" id="fb_apiKey"></label>
+        <label>Auth Domain<input type="text" id="fb_authDomain"></label>
+        <label>Project ID<input type="text" id="fb_projectId"></label>
+        <label>Storage Bucket<input type="text" id="fb_storageBucket"></label>
+        <label>Messaging Sender ID<input type="text" id="fb_messagingSenderId"></label>
+        <label>App ID<input type="text" id="fb_appId"></label>
+      </div>
+      <div class="btn-row">
+        <button class="btn-primary" id="fbConnectBtn">Guardar y conectar</button>
+        <button class="btn-secondary" id="fbDisconnectBtn">Desconectar</button>
+      </div>
+      <p id="fbStatus" class="muted-sm"></p>
+    </div>
+
+    <div class="card danger-card">
+      <h2>Zona de peligro</h2>
+      <p class="muted-sm">Elimina toda la información local: actividades, sesiones, registros, sanciones y nomenclatura personalizada.</p>
+      <button class="btn-danger" id="wipeBtn">Borrar TODOS los datos</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ MODALS ============ -->
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
